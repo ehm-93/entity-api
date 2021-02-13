@@ -1,0 +1,387 @@
+openapi: 3.0.0
+
+info:
+  title: Entities API
+  version: 1.0.0
+
+paths:
+  /schemas:
+    post:
+      description: Create a new schema
+      tags:
+      - Schemas
+      operationId: create
+      requestBody:
+        content: 
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Schema'
+      responses:
+        '200':
+          description: The schema was created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    $ref: '#/components/schemas/Schema'
+    get:
+      description: List all schemas
+      tags:
+      - Schemas
+      operationId: findAll
+      responses:
+        '200':
+          description: Data was fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Schema'
+      
+  /schemas/{schemaId}:
+    parameters:
+    - name: schemaId
+      required: true
+      description: The ID of the target Schema
+      in: path
+      schema:
+        type: string
+        format: uuid
+    get:
+      description: Find the schema with the passed ID
+      tags:
+      - Schemas
+      operationId: findById
+      responses:
+        '200':
+          description: Data was fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    $ref: '#/components/schemas/Schema'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      description: Update the schema with the passed ID, attributes not provided will be removed
+      tags: 
+      - Schemas
+      operationId: update
+      responses:
+        '200': 
+          description: The Schema was updated successfully
+          content: 
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value: 
+                   $ref: '#/components/schemas/Schema'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      description: Delete a schema with the passed ID
+      tags:
+      - Schemas
+      operationId: deleteById
+      responses:
+        '204':
+          description: The Schema was deleted successfully
+        '404': 
+          $ref: '#/components/responses/NotFound'
+
+  /schemas/{schemaId}/entities:
+    parameters:
+    - name: schemaId
+      required: true
+      description: The ID of the target Schema
+      in: path
+      schema:
+        type: string
+        format: uuid
+    get:
+      description: List all the entities for the passed schema ID
+      tags:
+      - Entities
+      operationId: findAllBySchemaId
+      responses:
+        '200':
+          description: Data was fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Entity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      description: Create a new entity under this schema
+      tags:
+      - Entities
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Entity'
+      responses:
+        '200':
+          description: The Entity was created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    $ref: '#/components/schemas/Entity'
+
+  /schema/{schemaId}/entities/{entityId}:
+    parameters:
+    - name: schemaId
+      required: true
+      description: The ID of the target schema
+      in: path
+      schema:
+        type: string
+        format: uuid
+    - name: entityId
+      required: true
+      description: The ID of the target Entity
+      in: path
+      schema:
+        type: string
+        format: uuid
+    get:
+      description: Find the entity for the passed ID
+      tags:
+      - Entities
+      operationId: findById
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    $ref: '#/components/schemas/Entity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      description: Update the entity for the passed ID
+      tags:
+      - Entities
+      operationId: update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Entity'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    $ref: '#/components/schemas/Entity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      description: Delete an entity with the passed ID
+      tags:
+      - Entities
+      operationId: deleteById
+      responses:
+        '204':
+          description: Success
+        '404': 
+          $ref: '#/components/responses/NotFound'
+
+  /schemas/{schemaId}/entities/{entityId}/{attribute}:
+    parameters:
+    - name: schemaId
+      required: true
+      description: The ID of the target schema
+      in: path
+      schema:
+        type: string
+        format: uuid
+    - name: entityId
+      required: true
+      description: The ID of the target Entity
+      in: path
+      schema:
+        type: string
+        format: uuid
+    - name: attribute
+      required: true
+      description: The name of an attribute on the target schema
+      in: path
+      schema:
+        type: string
+    get:
+      description: Retrieve the value of a single attribute on an entity
+      tags:
+      - Entities
+      operationId: getValue
+      responses: 
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum:
+                    - STRING
+                    - NUMBER
+                    - ENTITY
+                    - ENTITIES
+                  value:
+                    oneOf:
+                    - type: number
+                    - type: string
+                    - $ref: '#/components/schemas/Entity'
+                    - type: array
+                      items:
+                        $ref: '#/components/schemas/Entity'
+        '404':
+          $ref: '#/components/reponses/NotFound'
+    put:
+      description: Set the value of a single attribute on an entity.
+      tags:
+      - Entities
+      operationId: setValue
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - type: number
+              - type: string
+              - $ref: '#/components/schemas/Entity'
+              - type: array
+                items:
+                  $ref: '#/components/schemas/Entity'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object 
+                properties:
+                  value:
+                    oneOf:
+                    - type: number
+                    - type: string
+                    - $ref: '#/components/schemas/Entity'
+                    - type: array
+                      items:
+                        $ref: '#/components/schemas/Entity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  responses:
+    NotFound:
+      description: The requested resource could not be found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: 
+                type: string
+  schemas:
+    Schema:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: uuid
+        display: 
+          type: string
+        description: 
+          type: string
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attribute'
+    Attribute:
+      type: object
+      properties:
+        type: 
+          type: string
+        name: 
+          type: string
+        description:
+          type: string
+        required:
+          type: boolean
+        schemaId: 
+          type: string
+          format: uuid
+    StringAttribute:
+      allOf:
+      - $ref: '#/components/schemas/Attribute'
+      - type: object
+        properties:
+          maxLength: 
+            type: integer
+    NumericAttribute:
+      allOf:
+      - $ref: '#/components/schemas/Attribute'
+      - type: object
+        properties:
+          min: 
+            type: number
+          max: 
+            type: number
+          integer: 
+            type: boolean
+    RelationshipAttribute:
+      allOf:
+      - $ref: '#/components/schemas/Attribute'
+      - type: object
+        properties:
+          cardinality:
+            $ref: '#/components/schemas/RelationshipCardinality'
+          targetId:
+            type: string
+            format: uuid
+    RelationshipCardinality:
+      type: string
+      enum:
+      - ONE_TO_ONE
+      - ONE_TO_MANY
+      - MANY_TO_ONE
+      - MANY_TO_MANY
+    Entity:
+      type: object
+      additionalProperties: true
+      properties:
+        _id: 
+          type: string
+          format: uuid
+        schemaId:
+          type: string
+          format: uuid
