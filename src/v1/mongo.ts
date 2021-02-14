@@ -152,8 +152,51 @@ export class MongoEntityRepository implements EntityRepository {
   }
 
   async deleteById(id: string): Promise<void> {
-    LOG.trace('Deletign entity with ID "{0}"', id);
+    LOG.trace('Deleting entity with ID "{0}"', id);
     return this.models.EntityModel.findById(id).deleteOne();
+  }
+
+  async getRelationship(entity: models.Entity, relationship: string): Promise<models.Entity[]> {
+    LOG.trace('Fetching value of relationship {0} on entity {1}.', relationship, entity);
+    const result = await this.models.RelationshipModel.find({'tail.id': entity.id, name: relationship});
+    return result.map(x => x.head).map(this.fromMongoEntity);
+  }
+
+  async setRelationship(entity: models.Entity, relationship: string, value: models.Entity | models.Entity[]): Promise<models.Entity[]> {
+    LOG.trace('Setting value of relationship {0} on entity {1} to {2}', relationship, entity, value);
+
+    if (!Array.isArray(value)) {
+      value = [value];
+    }
+
+    const session = await this.models.RelationshipModel.startSession();
+    try {
+        await session.startTransaction();
+
+        const edges = await this.models.RelationshipModel.find({
+          name: relationship,
+          tail: entity.id
+        }, {
+          session: session
+        })
+          .populate('head');
+
+        edges.forEach(e => e.delete({session: session}));
+
+        await Promise.all(value.map(x => this.models.RelationshipModel.create({
+          head: x.id,
+          tail: entity.id,
+          name: relationship
+        }, {session: session})));
+
+        await session.commitTransaction();
+    } catch (e) {
+      await session.abortTransaction();
+    } finally {
+      await session.endSession();
+    }
+
+    return value;
   }
 
   private fromMongoEntity(src: MongoEntity): models.Entity {
@@ -206,8 +249,8 @@ export class MongoEntityRepository implements EntityRepository {
 
 interface Relationship {
   name: string;
-  head: MongoEntity;
-  tail: MongoEntity;
+  head: MongoEntity | string;
+  tail: MongoEntity | string;
 }
 
 interface MongoEntity {
@@ -257,8 +300,8 @@ export class MongoRepositoryFactory implements RepositoryFactory, Models {
   readonly RelationshipModel: mongo.Model<Relationship & mongo.Document>
   readonly relationshipSchema: mongo.Schema = new mongo.Schema({
     name: {type: String},
-    head: this.entitySchema,
-    tail: this.entitySchema
+    head: {type: this.entitySchema, ref: 'Entity'},
+    tail: {type: this.entitySchema, ref: 'Entity'}
   });
 
   constructor(private mongoose: mongo.Mongoose) {

@@ -1,4 +1,4 @@
-import {Entity, Schema} from './models';
+import {AttributeType, Cardinality, Entity, Schema} from './models';
 import { RepositoryFactory } from './repository';
 import express from 'express';
 import * as utils from '../utils';
@@ -174,12 +174,88 @@ export function init(repositories: RepositoryFactory, services: ServiceFactory):
                 .catch(e => handleError(req, res, e));
         });
 
-    app.route('/schema/:schemId/entities/:entityId/:attribute')
-        .get((req, res) => {
-            res.status(500).json({message: "Not yet implemented."});
+    app.route('/schemas/:schemaId/entities/:entityId/:attribute')
+        .get(async (req, res) => {
+            try {
+                const schemas = repositories.schemaRepository();
+                const entities = repositories.entityRepository();
+
+                const schema = await schemas.findById(req.params.schemaId);
+
+                if (!schema) {
+                    throw {status: 404, message: 'Schema not found.'};
+                }
+
+                const attribute = schema.attributes.find(a => a.name === req.params.attribute);
+
+                if (!attribute) {
+                    throw {status: 404, message: 'Attribute not found.'};
+                }
+
+                if (attribute.type !== AttributeType.RELATIONSHIP) {
+                    throw {status: 400, message: 'Target attribute is not a relationship.'};
+                }
+
+                const entity = await entities.findById(req.params.entityId);
+
+                if (!entity) {
+                    throw {status: 404, message: 'Entity not found.'};
+                }
+
+                const value = await entities.getRelationship(entity, req.params.attribute);
+
+                if (attribute.cardinality === Cardinality.MANY_TO_ONE || attribute.cardinality === Cardinality.ONE_TO_ONE) {
+                    res.json({value: value.length ? value[0] : []});
+                } else {
+                    res.json({value});
+                }
+            } catch (e) {
+                handleError(req, res, e);
+            }
         })
-        .put((req, res) => {
-            res.status(500).json({message: "Not yet implemented."});
+        .put(async (req, res) => {
+            try {
+                const schemas = repositories.schemaRepository();
+                const entities = repositories.entityRepository();
+
+                const schema = await schemas.findById(req.params.schemaId);
+
+                if (!schema) {
+                    throw {status: 404, message: 'Schema not found.'};
+                }
+
+                const attribute = schema.attributes.find(a => a.name === req.params.attribute);
+
+                if (!attribute) {
+                    throw {status: 404, message: 'Attribute not found.'};
+                }
+
+                if (attribute.type !== AttributeType.RELATIONSHIP) {
+                    throw {status: 400, message: 'Target attribute is not a relationship.'};
+                }
+
+                if (attribute.cardinality === Cardinality.MANY_TO_MANY || attribute.cardinality === Cardinality.ONE_TO_MANY) {
+                    if (!Array.isArray(req.body)) {
+                        throw {status: 400, message: `${attribute.name} has cardinality ${attribute.cardinality} which can only be updated with an array.`};
+                    }
+                } else {
+                    if (Array.isArray(req.body)) {
+                        throw {status: 400, message: `${attribute.name} has cardinality ${attribute.cardinality} which can only be updated with an entity.`};
+                    }
+                }
+
+                const entity = await entities.findById(req.params.entityId);
+
+                if (!entity) {
+                    throw {status: 404, message: 'Entity not found.'};
+                }
+
+                const value = await entities.setRelationship(entity, attribute.name, req.body);
+
+                res.json({value});
+            } catch (e) {
+                handleError(req, res, e);
+            }
         });
 
     return app;

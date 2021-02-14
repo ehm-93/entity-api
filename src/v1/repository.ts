@@ -26,6 +26,10 @@ export type SchemaRepository = Repository<Schema>;
 
 export interface EntityRepository extends Repository<Entity> {
   findAllBySchema(schema: Schema): Promise<Entity[]>;
+
+  getRelationship(entity: Entity, relationship: string): Promise<Entity[]>;
+
+  setRelationship(Entity: Entity, relationship: string, value: Entity[]): Promise<Entity[]>;
 }
 
 let factory: RepositoryFactory;
