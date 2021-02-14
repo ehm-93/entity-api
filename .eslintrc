@@ -14,7 +14,7 @@
       "semi": "error",
       "no-trailing-spaces": "error",
       "no-tabs": "error",
-      "no-extra-parens": "error"
+      "no-extra-parens": "warn"
     }
   }
   

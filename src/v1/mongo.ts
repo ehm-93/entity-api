@@ -8,6 +8,9 @@ import mongo = require("mongoose");
 
 const LOG = utils.logger("/v1/mongo");
 
+
+// TODO this all needs to be refactred, as is, this leaks Mongo specific information into the API
+//   add some separate, Mongo specific data models which get mapped manually to the API models
 export class MongoSchemaRepository implements SchemaRepository {
   constructor(private models: Models) {}
 
@@ -80,14 +83,14 @@ export class MongoEntityRepository implements EntityRepository {
 
     const relationships = {} as {[index: string]: Relationship & mongo.Document};
     for (const i of await this.models.RelationshipModel.find({tail: entity, name: relationship.name})) {
-      relationships[i.head._id] = i;
+      relationships[i.head.id] = i;
     }
 
     const existingIds = Object.keys(relationships);
 
     const targetsMap = {};
     for (const i of targets) {
-      targetsMap[i._id] = i;
+      targetsMap[i.id] = i;
     }
     const targetIds = Object.keys(targetsMap);
 
@@ -188,11 +191,6 @@ export class MongoRepositoryFactory implements RepositoryFactory, Models {
     this.SchemaModel.createCollection();
     this.EntityModel.createCollection();
     this.RelationshipModel.createCollection();
-  }
-
-  async doInTransaction<T>(todo: () => Promise<T>): Promise<T> {
-    const session = await this.mongoose.startSession();
-    return new Promise<T>(res => session.withTransaction(() => todo().then(res).finally(() => session.endSession())));
   }
 
   schemaRepository(): SchemaRepository {

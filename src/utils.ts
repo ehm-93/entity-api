@@ -47,7 +47,7 @@ export enum LogLevel {
 export let loggerFactory: LoggerFactory;
 
 let defaultFilter: LogLevel = LogLevel.INFO;
-export function setDefaultFilter(level: LogLevel) {
+export function setDefaultFilter(level: LogLevel): void {
     defaultFilter = level;
 }
 

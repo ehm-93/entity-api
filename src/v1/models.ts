@@ -1,14 +1,14 @@
 export interface Entity {
-    _id: string,
+    id: string,
     schemaId: string
-    [index: string]: string | number
+    [index: string]: string | number | boolean;
 }
 
 export interface Schema {
-    _id: string,
+    id: string,
     display: string,
     description: string
-    attributes: [Attribute]
+    attributes: Attribute[]
 }
 
 export interface Attribute {
@@ -29,6 +29,8 @@ export interface NumericAttribute extends Attribute {
     integer: boolean
 }
 
+export type BooleanAttribute = Attribute
+
 export interface RelationshipAttribute extends Attribute {
     cardinality: Cardinality,
     targetId: string
@@ -37,6 +39,7 @@ export interface RelationshipAttribute extends Attribute {
 export enum AttributeType {
     STRING = "StringAttribute",
     NUMERIC = "NumericAttribute",
+    BOOLEAN = "BooleanAttribute",
     RELATIONSHIP = "RelationshipAttribute"
 }
 
@@ -45,4 +48,10 @@ export enum Cardinality {
     ONE_TO_MANY,
     MANY_TO_ONE,
     MANY_TO_MANY
+}
+
+export interface ValidationResult {
+    valid: boolean,
+    message?: string
+    messages?: {[index: string]: string}
 }
