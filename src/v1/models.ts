@@ -16,24 +16,16 @@ export interface Attribute {
     name: string,
     display: string,
     description: string,
-    required: boolean
-}
+    required: boolean,
 
-export interface StringAttribute extends Attribute {
-    maxLength: number
-}
+    maxLength?: number,
 
-export interface NumericAttribute extends Attribute {
-    min: number,
-    max: number,
-    integer: boolean
-}
+    min?: number,
+    max?: number,
+    integer?: boolean
 
-export type BooleanAttribute = Attribute
-
-export interface RelationshipAttribute extends Attribute {
-    cardinality: Cardinality,
-    targetId: string
+    cardinality?: Cardinality,
+    targetId?: string
 }
 
 export enum AttributeType {

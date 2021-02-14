@@ -1,4 +1,4 @@
-import {AttributeType, NumericAttribute, StringAttribute} from '../../src/v1/models';
+import {AttributeType} from '../../src/v1/models';
 import * as services from '../../src/v1/services';
 
 import {describe, test} from 'mocha';
@@ -98,14 +98,14 @@ describe('Entity validation', () => {
                 min: 0,
                 max: 10,
                 integer: true
-            } as NumericAttribute, {
+            }, {
                 name: 'string',
                 display: "string",
                 description: "The string",
                 required: true,
                 type: AttributeType.STRING,
                 maxLength: 1
-            } as StringAttribute]
+            }]
         }, {
             id: "12345678-1234-1234-1234-123456789012",
             schemaId: "87654321-1234-1234-1234-123456789012",
@@ -137,14 +137,14 @@ describe('Entity validation', () => {
                 min: 0,
                 max: 10,
                 integer: false
-            } as NumericAttribute, {
+            }, {
                 name: 'string',
                 display: "string",
                 description: "The string",
                 required: true,
                 type: AttributeType.STRING,
                 maxLength: 5
-            } as StringAttribute]
+            }]
         }, {
             id: "12345678-1234-1234-1234-123456789012",
             schemaId: "87654321-1234-1234-1234-123456789012",
@@ -176,14 +176,14 @@ describe('Entity validation', () => {
                 min: 0,
                 max: 10,
                 integer: true
-            } as NumericAttribute, {
+            }, {
                 name: 'string',
                 display: "string",
                 description: "The string",
                 required: false,
                 type: AttributeType.STRING,
                 maxLength: 1
-            } as StringAttribute]
+            }]
         }, {
             id: "12345678-1234-1234-1234-123456789012",
             schemaId: "87654321-1234-1234-1234-123456789012",
@@ -215,14 +215,14 @@ describe('Entity validation', () => {
                 min: 0,
                 max: 10,
                 integer: true
-            } as NumericAttribute, {
+            }, {
                 name: 'string',
                 display: "string",
                 description: "The string",
                 required: false,
                 type: AttributeType.STRING,
                 maxLength: 1
-            } as StringAttribute]
+            }]
         }, {
             id: "12345678-1234-1234-1234-123456789012",
             schemaId: "87654321-1234-1234-1234-123456789012",
@@ -254,14 +254,14 @@ describe('Entity validation', () => {
                 min: 0,
                 max: 10,
                 integer: true
-            } as NumericAttribute, {
+            }, {
                 name: 'string',
                 display: "string",
                 description: "The string",
                 required: false,
                 type: AttributeType.STRING,
                 maxLength: 1
-            } as StringAttribute]
+            }]
         }, {
             id: "12345678-1234-1234-1234-123456789012",
             schemaId: "87654321-1234-1234-1234-123456789012",
@@ -293,14 +293,14 @@ describe('Entity validation', () => {
                 min: 0,
                 max: 10,
                 integer: true
-            } as NumericAttribute, {
+            }, {
                 name: 'string',
                 display: "string",
                 description: "The string",
                 required: false,
                 type: AttributeType.STRING,
                 maxLength: 1
-            } as StringAttribute]
+            }]
         }, {
             id: "12345678-1234-1234-1234-123456789012",
             schemaId: "87654321-1234-1234-1234-123456789012",

@@ -1,14 +1,18 @@
 /**
  * The format function will replace numbered tokens within a string.
  *
- * Shamelessly stolen from StackOverflow: https://stackoverflow.com/questions/610406/javascript-equivalent-to-printf-string-format
- *
  * @param str the string to format, like: 'Format {0} this {1} string'
  * @param params the values to replace the placeholder tokens
  */
-export function format(str: string, ...params: any): string {
+export function format(str: string, ...params: any[]): string {
     return str.replace(/{(\d+)}/g, function(match, number) {
-        return typeof params[number] != 'undefined' ? params[number] : match;
+        const tmp = params[number] || match;
+
+        if (typeof tmp === 'object') {
+            return JSON.stringify(tmp);
+        } else {
+            return tmp || match;
+        }
     });
 }
 
@@ -17,19 +21,19 @@ export function format(str: string, ...params: any): string {
  */
 export interface Logger {
     traceEnabled(): boolean
-    trace(msg: string, ...params: any): void
+    trace(msg: string, ...params: any[]): void
 
     debugEnabled(): boolean
-    debug(msg: string, ...params: any): void
+    debug(msg: string, ...params: any[]): void
 
     infoEnabled(): boolean
-    info(msg: string, ...params: any): void
+    info(msg: string, ...params: any[]): void
 
     warnEnabled(): boolean
-    warn(msg: string, ...params: any): void
+    warn(msg: string, ...params: any[]): void
 
     errorEnabled(): boolean
-    error(msg: string, ...params: any): void
+    error(msg: string, ...params: any[]): void
 }
 
 export interface LoggerFactory {
@@ -66,52 +70,52 @@ class ConsoleLogger implements Logger {
         return this.levelEnabled(LogLevel.TRACE);
     }
 
-    trace(msg: string, ...params: any):void {
-        this.log(LogLevel.TRACE, msg, params);
+    trace(msg: string, ...params: any[]):void {
+        this.log(LogLevel.TRACE, msg, ...params);
     }
 
     debugEnabled() {
         return this.levelEnabled(LogLevel.DEBUG);
     }
 
-    debug(msg: string, ...params: any) {
-        this.log(LogLevel.DEBUG, msg, params);
+    debug(msg: string, ...params: any[]) {
+        this.log(LogLevel.DEBUG, msg, ...params);
     }
 
     infoEnabled() {
         return this.levelEnabled(LogLevel.INFO);
     }
 
-    info(msg: string, ...params: any) {
-        this.log(LogLevel.INFO, msg, params);
+    info(msg: string, ...params: any[]) {
+        this.log(LogLevel.INFO, msg, ...params);
     }
 
     warnEnabled() {
         return this.levelEnabled(LogLevel.WARN);
     }
 
-    warn(msg: string, ...params: any) {
-        this.log(LogLevel.WARN, msg, params);
+    warn(msg: string, ...params: any[]) {
+        this.log(LogLevel.WARN, msg, ...params);
     }
 
     errorEnabled() {
         return this.levelEnabled(LogLevel.ERROR);
     }
 
-    error(msg: string, ...params: any) {
-        this.log(LogLevel.ERROR, msg, params);
+    error(msg: string, ...params: any[]) {
+        this.log(LogLevel.ERROR, msg, ...params);
     }
 
     levelEnabled(level: LogLevel) {
         return this.granularity <= level;
     }
 
-    log(level: LogLevel, msg: string, ...params: any) {
+    log(level: LogLevel, msg: string, ...params: any[]) {
         if (!this.levelEnabled(level)) {
             return;
         }
 
-        console.log(`${new Date().toISOString()} ${LogLevel[level]} ${this.pkg} - ${format(msg, params)}`);
+        console.log(`${new Date().toISOString()} ${LogLevel[level]} ${this.pkg} - ${format(msg, ...params)}`);
     }
 }
 

@@ -1,9 +1,7 @@
 import {
     AttributeType,
     Entity,
-    NumericAttribute,
     Schema,
-    StringAttribute,
     ValidationResult
 } from './models';
 import {logger} from '../utils';
@@ -16,7 +14,7 @@ export interface ServiceFactory {
 
 export class EntityValidationService {
     validate(schema: Schema, entity: Entity): ValidationResult {
-        LOG.trace("Validating entity '{0}' against schema '{1}'.", entity.id, schema.id);
+        LOG.trace("Validating entity '{0}' against schema '{1}'.", entity, schema);
 
         if (entity.schemaId !== schema.id) {
             return {
@@ -62,11 +60,9 @@ export class EntityValidationService {
                         break;
                     }
 
-                    const strAttr = attr as StringAttribute;
-
-                    if (strAttr.maxLength != null && strAttr.maxLength < value.length) {
+                    if (attr.maxLength != null && attr.maxLength < value.length) {
                         result.valid = false;
-                        result.messages[attr.name] = `Max length is ${strAttr.maxLength}.`;
+                        result.messages[attr.name] = `Max length is ${attr.maxLength}.`;
                     }
 
                     break;
@@ -78,21 +74,20 @@ export class EntityValidationService {
                     }
 
                     const numValue = value as number;
-                    const numAttr = attr as NumericAttribute;
 
-                    if (numAttr.max != null && numAttr.max < numValue) {
+                    if (attr.max != null && attr.max < numValue) {
                         result.valid = false;
-                        result.messages[attr.name] = `Max value is ${numAttr.max}.`;
+                        result.messages[attr.name] = `Max value is ${attr.max}.`;
                         break;
                     }
 
-                    if (numAttr.min != null && numValue < numAttr.min) {
+                    if (attr.min != null && numValue < attr.min) {
                         result.valid = false;
-                        result.messages[attr.name] = `Min value is ${numAttr.max}.`;
+                        result.messages[attr.name] = `Min value is ${attr.max}.`;
                         break;
                     }
 
-                    if (numAttr.integer && numValue % 1 !== 0) {
+                    if (attr.integer && numValue % 1 !== 0) {
                         result.valid = false;
                         result.messages[attr.name] = `Value must be an integer.`;
                         break;

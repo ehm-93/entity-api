@@ -1,4 +1,4 @@
-import { Schema, Entity, RelationshipAttribute } from "./models";
+import { Schema, Entity } from "./models";
 import { logger } from "../utils";
 import * as mongo from "./mongo";
 
@@ -25,11 +25,7 @@ export interface Repository<T> {
 export type SchemaRepository = Repository<Schema>;
 
 export interface EntityRepository extends Repository<Entity> {
-  findAllBySchemaId(schemaId: string): Promise<Entity[]>;
-
-  getTargets(entity: Entity, relationship: RelationshipAttribute): Promise<Entity[]>
-
-  setTargets(entity: Entity, relationship: RelationshipAttribute, targets: Entity[]): Promise<void>;
+  findAllBySchema(schema: Schema): Promise<Entity[]>;
 }
 
 let factory: RepositoryFactory;

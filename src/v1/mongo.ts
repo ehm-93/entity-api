@@ -7,120 +7,219 @@ import { v4 as uuid } from "uuid";
 import mongo = require("mongoose");
 
 const LOG = utils.logger("/v1/mongo");
-
-
-// TODO this all needs to be refactred, as is, this leaks Mongo specific information into the API
-//   add some separate, Mongo specific data models which get mapped manually to the API models
 export class MongoSchemaRepository implements SchemaRepository {
   constructor(private models: Models) {}
 
   async create(schema: models.Schema): Promise<models.Schema> {
-    LOG.trace('Creating schema: {0}.', schema);
-    return await this.models.SchemaModel.create(schema);
+    LOG.trace('Creating schema: {0}', schema);
+    const result = await this.models.SchemaModel.create(this.toMongoSchema(schema));
+    return this.fromMongoSchema(result);
   }
 
   async findAll(): Promise<models.Schema[]> {
-    LOG.trace('Retrieving all schemas.');
-    return await this.models.SchemaModel.find().then();
+    LOG.trace('Retrieving all schemas');
+    const result = await this.models.SchemaModel.find();
+    return result.map(this.fromMongoSchema);
   }
 
   async findById(id: string): Promise<models.Schema> {
-    LOG.trace('Searching for Schema with ID: "{0}".', id);
-    return await this.models.SchemaModel.findById(id);
+    LOG.trace('Searching for Schema with ID: "{0}"', id);
+    const result = await this.models.SchemaModel.findById(id);
+    return this.fromMongoSchema(result);
   }
 
   async update(schema: models.Schema): Promise<models.Schema> {
-    LOG.trace('Updating Schema: "{0}".', schema);
-    return await this.models.SchemaModel.updateOne(schema);
+    LOG.trace('Updating Schema: "{0}"', schema);
+    const result = await this.models.SchemaModel.findById(schema.id);
+
+    if (!result) {
+      throw {status: 404, message: "Schema not found."};
+    }
+
+    result.display = schema.display;
+    result.description = schema.description;
+    result.attributes = schema.attributes;
+
+    result.save();
+
+    return this.fromMongoSchema(result);
   }
 
   async deleteById(id: string): Promise<void> {
-    LOG.trace('Deleting Schema with ID: "{0}".', id);
+    LOG.trace('Deleting Schema with ID: "{0}"', id);
     return await this.models.SchemaModel.findById(id).deleteOne();
+  }
+
+  // Since objects returned from Mongo are Documents, we need to strip all the
+  // Mongo specific junk out of the response to only expose the attributes on our model
+  private fromMongoSchema(s: models.Schema & mongo.Document): models.Schema {
+    if (s == null) {
+      return null;
+    }
+
+    return {
+      id: s._id as string,
+      display: s.display,
+      description: s.description,
+      attributes: s.attributes ? s.attributes.map(a => { return {
+        type: a.type,
+        name: a.name,
+        display: a.display,
+        description: a.description,
+        required: a.required,
+        maxLength: a.maxLength,
+        min: a.min,
+        max: a.max,
+        integer: a.integer,
+        cardinality: a.cardinality,
+        targetId: a.targetId
+      };}): []
+  };
+  }
+
+  private toMongoSchema(s: models.Schema): models.Schema {
+    if (s == null) {
+      return null;
+    }
+
+    return {
+      _id: s.id as string,
+      display: s.display,
+      description: s.description,
+      attributes: s.attributes ? s.attributes.map(a => { return {
+        type: a.type,
+        name: a.name,
+        display: a.display,
+        description: a.description,
+        required: a.required,
+        maxLength: a.maxLength,
+        min: a.min,
+        max: a.max,
+        integer: a.integer,
+        cardinality: a.cardinality,
+        targetId: a.targetId
+      };}): []
+  } as any;
   }
 }
 
 export class MongoEntityRepository implements EntityRepository {
-  constructor(private models: Models) { }
+  constructor(private models: Models) {}
 
-  async create(entity: models.Entity): Promise<models.Entity> {
-    LOG.trace('Creating Entity: "{0}".', entity);
-    return await this.models.EntityModel.create(entity);
+  async findAllBySchema(schema: models.Schema): Promise<models.Entity[]> {
+    LOG.trace('Seaching for entities for schema {0}', schema);
+    const result = await this.models.EntityModel.find({schemaId: schema.id});
+    return result.map(this.fromMongoEntity);
+  }
+
+  async create(obj: models.Entity): Promise<models.Entity> {
+    LOG.trace('Creating entity {0}', obj);
+    const result = await this.models.EntityModel.create(this.toMongoEntity(obj));
+    return this.fromMongoEntity(result);
   }
 
   async findAll(): Promise<models.Entity[]> {
-    LOG.trace('Retrieving all entities.');
-    return await this.models.EntityModel.find().then();
+    LOG.trace('Fetching all entities');
+    const result = await this.models.EntityModel.find();
+    return result.map(this.fromMongoEntity);
   }
 
   async findById(id: string): Promise<models.Entity> {
-    LOG.trace('Searching for Entity with ID: "{0}"', id);
-    return await this.models.EntityModel.findById(id);
+    LOG.trace('Finding entity for ID "{0}"', id);
+    const result = await this.models.EntityModel.findById(id);
+    return this.fromMongoEntity(result);
   }
 
-  async update(entity: models.Entity): Promise<models.Entity> {
-    LOG.trace('Updating entity: "{0}".', entity);
-    return await this.models.EntityModel.updateOne(entity);
+  async update(obj: models.Entity): Promise<models.Entity> {
+    LOG.trace('Updating entity {0}', obj);
+    const result = await this.models.EntityModel.findById(obj.id);
+
+    if (!result) {
+      throw {status: 404, message: 'Entity not found.'};
+    }
+
+    for (const [key, value] of Object.entries(obj)) {
+      if (key === 'id' || key === 'schemaId') {
+        continue;
+      }
+
+      result.attributes[key] = value;
+    }
+
+    result.save();
+
+    return this.fromMongoEntity(result);
   }
 
   async deleteById(id: string): Promise<void> {
-    LOG.trace('Deleting Entity with ID: "{0}".', id);
-    return await this.models.EntityModel.findById(id).deleteOne();
+    LOG.trace('Deletign entity with ID "{0}"', id);
+    return this.models.EntityModel.findById(id).deleteOne();
   }
 
-  async findAllBySchemaId(schemaId: string): Promise<models.Entity[]> {
-    LOG.trace('Searching for Entities for schema ID: "{0}".', schemaId);
-    return await this.models.EntityModel.find({ schemaId }).then();
-  }
-
-  async getTargets(entity: models.Entity, relationship: models.RelationshipAttribute): Promise<models.Entity[]> {
-    LOG.trace('Searching for targets of relationship "{0}" on entity "{1}".', relationship, entity);
-    return await this.models.RelationshipModel.find({tail: entity, name: relationship.name}).then(relationships => relationships.map(r => r.head));
-  }
-
-  async setTargets(entity: models.Entity, relationship: models.RelationshipAttribute, targets: models.Entity[]): Promise<void> {
-    LOG.trace('Setting targets for entity "{0}" and relatioship "{1}".', entity, relationship);
-
-    const relationships = {} as {[index: string]: Relationship & mongo.Document};
-    for (const i of await this.models.RelationshipModel.find({tail: entity, name: relationship.name})) {
-      relationships[i.head.id] = i;
+  private fromMongoEntity(src: MongoEntity): models.Entity {
+    if (src == null) {
+      return null;
     }
 
-    const existingIds = Object.keys(relationships);
+    const dst = {
+      id: src._id,
+      schemaId: src.schemaId
+    };
 
-    const targetsMap = {};
-    for (const i of targets) {
-      targetsMap[i.id] = i;
+    if (!src.attributes) {
+      return dst;
     }
-    const targetIds = Object.keys(targetsMap);
 
-    for (const id of targetIds) {
-      if (!existingIds.includes(id)) {
-        await this.models.RelationshipModel.create({name: relationship.name, head: MongoEntityRepository, tail: targetsMap[id]});
+    for (const [key, value] of Object.entries(src.attributes)) {
+      if (key === 'id' || key === 'schemaId') {
+        continue;
       }
+
+      dst[key] = value;
     }
 
-    for (const id of existingIds) {
-      if (!targetIds.includes(id)) {
-        relationships[id].remove();
-      }
+    return dst;
+  }
+
+  private toMongoEntity(src: models.Entity): MongoEntity {
+    if (src == null) {
+      return null;
     }
+
+    const dst = {
+      _id: src.id,
+      schemaId: src.schemaId,
+      attributes: {}
+    };
+
+    for (const [key, value] of Object.entries(src)) {
+      if (key === 'id' || key === 'schemaId') {
+        continue;
+      }
+
+      dst.attributes[key] = value;
+    }
+
+    return dst;
   }
 }
 
 interface Relationship {
   name: string;
-  head: models.Entity;
-  tail: models.Entity;
+  head: MongoEntity;
+  tail: MongoEntity;
+}
+
+interface MongoEntity {
+  _id: string,
+  schemaId: string,
+  attributes: {[index: string]: string | number | boolean}
 }
 
 interface Models {
   readonly AttributeModel: mongo.Model<models.Attribute & mongo.Document>,
-  readonly StringAttributeModel: mongo.Model<models.StringAttribute & mongo.Document>,
-  readonly NumericAttributeModel: mongo.Model<models.NumericAttribute & mongo.Document>,
-  readonly RelationshipAttributeModel: mongo.Model<models.RelationshipAttribute & mongo.Document>,
   readonly SchemaModel: mongo.Model<models.Schema & mongo.Document>,
-  readonly EntityModel: mongo.Model<models.Entity & mongo.Document>,
+  readonly EntityModel: mongo.Model<MongoEntity & mongo.Document>,
   readonly RelationshipModel: mongo.Model<Relationship & mongo.Document>
 }
 
@@ -132,22 +231,10 @@ export class MongoRepositoryFactory implements RepositoryFactory, Models {
     display: { type: String },
     description: { type: String },
     required: { type: Boolean },
-  }, { discriminatorKey: "type" });
-
-  readonly StringAttributeModel: mongo.Model<models.StringAttribute & mongo.Document>;
-  readonly stringAttributeSchema: mongo.Schema = new mongo.Schema({
     maxLength: { type: String },
-  });
-
-  readonly NumericAttributeModel: mongo.Model<models.NumericAttribute & mongo.Document>;
-  readonly numericAttributeSchema: mongo.Schema = new mongo.Schema({
     min: { type: Number },
     max: { type: Number },
     integer: { type: Boolean },
-  });
-
-  readonly RelationshipAttributeModel: mongo.Model<models.RelationshipAttribute & mongo.Document>;
-  readonly relationshipAttributeSchema: mongo.Schema = new mongo.Schema({
     cardinality: {type: String},
     targetId: {type: String}
   });
@@ -160,10 +247,11 @@ export class MongoRepositoryFactory implements RepositoryFactory, Models {
     attributes: [this.attributeSchema],
   });
 
-  readonly EntityModel: mongo.Model<models.Entity & mongo.Document>;
+  readonly EntityModel: mongo.Model<MongoEntity & mongo.Document>;
   readonly entitySchema: mongo.Schema = new mongo.Schema({
     _id: {type: String, default: uuid},
-    schemaId: {type: String}
+    schemaId: {type: String},
+    attributes: {}
   });
 
   readonly RelationshipModel: mongo.Model<Relationship & mongo.Document>
@@ -177,17 +265,11 @@ export class MongoRepositoryFactory implements RepositoryFactory, Models {
     LOG.trace('Initializing models.');
 
     this.AttributeModel = this.mongoose.model('Attribute', this.attributeSchema);
-    this.StringAttributeModel = this.AttributeModel.discriminator(models.AttributeType.STRING, this.stringAttributeSchema);
-    this.NumericAttributeModel = this.AttributeModel.discriminator(models.AttributeType.NUMERIC, this.numericAttributeSchema);
-    this.RelationshipAttributeModel = this.AttributeModel.discriminator(models.AttributeType.RELATIONSHIP, this.relationshipAttributeSchema);
     this.SchemaModel = this.mongoose.model('Schema', this.schemaSchema);
     this.EntityModel = this.mongoose.model('Entity', this.entitySchema);
     this.RelationshipModel = this.mongoose.model('Relationship', this.relationshipSchema);
 
     this.AttributeModel.createCollection();
-    this.StringAttributeModel.createCollection();
-    this.NumericAttributeModel.createCollection();
-    this.RelationshipAttributeModel.createCollection();
     this.SchemaModel.createCollection();
     this.EntityModel.createCollection();
     this.RelationshipModel.createCollection();
