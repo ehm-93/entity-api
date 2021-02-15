@@ -1,11 +1,13 @@
-export interface Entity {
-    id: string,
+export interface Identified {
+    id: string
+}
+
+export interface Entity extends Identified {
     schemaId: string
     [index: string]: string | number | boolean;
 }
 
-export interface Schema {
-    id: string,
+export interface Schema extends Identified {
     display: string,
     description: string
     attributes: Attribute[]

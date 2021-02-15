@@ -1,6 +1,7 @@
-import { Schema, Entity } from "./models";
+import { Schema, Entity, Identified } from "./models";
 import { logger } from "../utils";
 import * as mongo from "./mongo";
+import {v4 as uuid} from 'uuid';
 
 const LOG = logger('/v1/repository');
 
@@ -10,7 +11,7 @@ export interface RepositoryFactory {
   entityRepository(): EntityRepository;
 }
 
-export interface Repository<T> {
+export interface Repository<T extends Identified> {
   create(obj: T): Promise<T>;
 
   findAll(): Promise<T[]>;
