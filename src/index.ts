@@ -8,20 +8,25 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import * as api from './v1/api';
-import * as repo from './v1/repository';
-import * as services from './v1/services';
 import express from 'express';
 
-const databaseUrl = process.env.DATABASE_URL;
+import * as v1 from './v1';
+
+const databaseUrl = process.env.DATABASE_URL && new URL(process.env.DATABASE_URL);
+
+if (!databaseUrl) {
+    throw Error('The DATABASE_URL environment variable must be set.');
+}
+
+const port = +(process.env.PORT || 8080);
+const host = process.env.HOST || 'localhost';
 
 LOG.info('App is starting up...');
-repo.init(new URL(databaseUrl))
-    .then(factory => {
-        LOG.trace('Repositories are loaded, starting API configuration.');
-        return api.init(factory, services.init());
-    })
-    .then(api => {
-        express().use('/v1', api).listen(8080, "localhost");
-        LOG.info('App is started and listening on port {0}.', 8080);
-    });
+
+(async () => {
+    const v1Api = await v1.init(databaseUrl);
+
+    express().use('v1', v1Api).listen(port, host);
+
+    LOG.info('App is listening at {0}:{1}.', host, port);
+})();

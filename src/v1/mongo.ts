@@ -1,5 +1,5 @@
 import * as utils from "../utils";
-import { EntityRepository, RepositoryFactory, SchemaRepository } from "./repository";
+import { EntityRepository, RepositoryFactory, SchemaRepository, registerInitializer } from "./repository";
 import * as models from "./models";
 
 import { v4 as uuid } from "uuid";
@@ -327,13 +327,10 @@ export class MongoRepositoryFactory implements RepositoryFactory, Models {
   }
 }
 
-export async function init(url: URL): Promise<RepositoryFactory> {
-  LOG.trace("Initializing Mongo with URL: '{0}'.", url);
-
-  return await mongo.connect(url.toString(), {
+registerInitializer('mongodb', url => mongo.connect(url.toString(), {
     useNewUrlParser: true,
     useUnifiedTopology: true,
     ssl: true,
     sslValidate: true
-  }).then(mongoose => new MongoRepositoryFactory(mongoose));
-}
+  }).then(mongoose => new MongoRepositoryFactory(mongoose))
+);

@@ -1,7 +1,5 @@
 import { Schema, Entity, Identified } from "./models";
 import { logger } from "../utils";
-import * as mongo from "./mongo";
-import {v4 as uuid} from 'uuid';
 
 const LOG = logger('/v1/repository');
 
@@ -33,30 +31,23 @@ export interface EntityRepository extends Repository<Entity> {
   setRelationship(Entity: Entity, relationship: string, value: Entity[]): Promise<Entity[]>;
 }
 
-let factory: RepositoryFactory;
+const factoryInitializers = {} as {[index: string]: (url: URL) => Promise<RepositoryFactory>};
 
 export async function init(url: URL): Promise<RepositoryFactory> {
-  LOG.info("Initilizing repositories with protocol: {0}", url.protocol);
+  // url protocols may be formatted like 'mongodb+srv:', we just want to match on the 'mongodb' bit.
+  const protocol = url.protocol.slice(0, url.protocol.length - 1).split('+')[0];
 
-  if (url.protocol.startsWith("mongodb")) {
-    return factory = await mongo.init(url);
-  } else {
-    throw Error(`Unsupported repository protocol: ${url.protocol}`);
+  const initializer = factoryInitializers[protocol];
+
+  if (!initializer) {
+    throw Error(`Unsupported repository protocol: ${url.protocol}.`);
   }
+
+  LOG.info("Initializing repository for protocol '{0}'.", url.protocol);
+
+  return await initializer(url);
 }
 
-export function schemas(): SchemaRepository {
-  if (!factory) {
-    throw Error("Repositories have not been initialized.");
-  }
-
-  return factory.schemaRepository();
-}
-
-export function entities(): EntityRepository {
-  if (!factory) {
-    throw Error("Repositories have not been initialized.");
-  }
-
-  return factory.entityRepository();
+export function registerInitializer(protocol: string, initializer:(url: URL) => Promise<RepositoryFactory>): void {
+  factoryInitializers[protocol] = initializer;
 }

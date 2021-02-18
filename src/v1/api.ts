@@ -2,11 +2,11 @@ import {AttributeType, Cardinality, Entity, Schema} from './models';
 import { RepositoryFactory } from './repository';
 import express from 'express';
 import * as utils from '../utils';
-import { EntityValidationService, ServiceFactory } from './services';
+import { ServiceFactory } from './services';
 
 const LOG = utils.logger('/v1/api');
 
-export function init(repositories: RepositoryFactory, services: ServiceFactory): express.Express {
+export function init(repositories: RepositoryFactory, services: ServiceFactory): express.Application {
     const app = express();
 
     app.use(express.json());
