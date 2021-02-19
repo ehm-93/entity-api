@@ -6,7 +6,7 @@ const LOG = logger('/v1/repository');
 export interface RepositoryFactory {
   schemaRepository(): SchemaRepository;
 
-  entityRepository(): EntityRepository;
+  entityRepository(schema: Schema): EntityRepository;
 }
 
 export interface Repository<T extends Identified> {
@@ -23,13 +23,7 @@ export interface Repository<T extends Identified> {
 
 export type SchemaRepository = Repository<Schema>;
 
-export interface EntityRepository extends Repository<Entity> {
-  findAllBySchema(schema: Schema): Promise<Entity[]>;
-
-  getRelationship(entity: Entity, relationship: string): Promise<Entity[]>;
-
-  setRelationship(Entity: Entity, relationship: string, value: Entity[]): Promise<Entity[]>;
-}
+export type EntityRepository = Repository<Entity>;
 
 const factoryInitializers = {} as {[index: string]: (url: URL) => Promise<RepositoryFactory>};
 

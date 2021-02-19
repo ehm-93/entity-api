@@ -1,4 +1,4 @@
-import {AttributeType, Cardinality, Entity, Schema} from './models';
+import {AttributeType, Entity, Schema} from './models';
 import { RepositoryFactory } from './repository';
 import express from 'express';
 import * as utils from '../utils';
@@ -18,247 +18,257 @@ export function init(repositories: RepositoryFactory, services: ServiceFactory):
     });
 
     app.route('/schemas')
-        .get((req, res) => {
-            repositories.schemaRepository()
-                .findAll()
-                .then(value => res.json({value}))
-                .catch(e => handleError(req, res, e));
-        })
-        .post((req, res) => {
+        .get(wrap(async (req, res) => {
+            const schemas = repositories.schemaRepository();
+
+            const value = await schemas.findAll();
+
+            res.json({value});
+        }))
+        .post(wrap(async (req, res) => {
             const schema = req.body as Schema;
             schema.id = undefined;
 
-            repositories.schemaRepository()
-                .create(schema)
-                .then(value => res.json({value}))
-                .catch(e => handleError(req, res, e));
-        });
+            const schemas = repositories.schemaRepository();
+
+            const value = await schemas.create(schema);
+
+            res.json({value});
+        }));
 
     app.route('/schemas/:id')
-        .get((req, res) => {
-            repositories.schemaRepository()
-                .findById(req.params.id)
-                .then(value => {
-                    if (!value) {
-                        throw {status: 404, message: 'Schema not found.'};
-                    }
+        .get(wrap(async (req, res) => {
+            const schemas = repositories.schemaRepository();
 
-                    res.json({value});
-                })
-                .catch(e => handleError(req, res, e));
-        })
-        .put((req, res) => {
-            repositories.schemaRepository()
-                .update(req.body as Schema)
-                .then(value => res.json({value}))
-                .catch(e => handleError(req, res, e));
-        })
-        .delete((req, res) => {
-            repositories.schemaRepository()
-                .deleteById(req.params.id)
-                .then(() => res.sendStatus(204))
-                .catch(e => handleError(req, res, e));
-        });
+            const value = await schemas.findById(req.params.id);
+
+            if (!value) {
+                throw {status: 404, message: 'Schema not found.'};
+            }
+
+            res.json({value});
+        }))
+        .put(wrap(async (req, res) => {
+            const schemas = repositories.schemaRepository();
+
+            const value = await schemas.update(req.body as Schema);
+
+            res.json({value});
+        }))
+        .delete(wrap(async (req, res) => {
+            const schemas = repositories.schemaRepository();
+
+            await schemas.deleteById(req.params.id);
+
+            res.sendStatus(204);
+        }));
 
     app.route('/schemas/:schemaId/validate')
-        .put((req, res) => {
-            repositories.schemaRepository()
-                .findById(req.params.schemaId)
-                .then(schema => {
-                    if (!schema) {
-                        throw {status: 404, message: 'Schema not found.'};
-                    }
+        .put(wrap(async (req, res) => {
+            const schemas = repositories.schemaRepository();
 
-                    const value = services.entityValidation().validate(schema, req.body as Entity);
+            const schema = await schemas.findById(req.params.schemaId);
 
-                    res.status(200).json({value});
-                })
-                .catch(e => handleError(req, res, e));
-        });
+            if (!schema) {
+                throw {status: 404, message: 'Schema not found.'};
+            }
+
+            const value = services.entityValidation().validate(schema, req.body as Entity);
+
+            res.status(200).json({value});
+        }));
 
     app.route('/schemas/:schemaId/entities')
-        .get((req, res) => {
-            repositories.schemaRepository()
-                .findById(req.params.schemaId)
-                .then(schema => {
-                    if (!schema) {
-                        throw {status: 404, message: 'Schema not found.'};
-                    }
+        .get(wrap(async (req, res) => {
+            const schemas = repositories.schemaRepository();
 
-                    repositories.entityRepository()
-                        .findAllBySchema(schema)
-                        .then(value => res.json({value}));
-                })
-                .catch(e => handleError(req, res, e));
-        })
-        .post((req, res) => {
-            repositories.schemaRepository()
-                .findById(req.params.schemaId)
-                .then(schema => {
-                    if (!schema) {
-                        throw {status: 404, message: 'Schema not found.'};
-                    }
+            const schema = await schemas.findById(req.params.schemaId);
 
-                    const entity = req.body as Entity;
-                    entity.id = undefined;
-                    entity.schemaId = schema.id;
+            if (!schema) {
+                throw {status: 404, message: 'Schema not found.'};
+            }
 
-                    const validation = services.entityValidation()
-                        .validate(schema, entity);
+            const entities = repositories.entityRepository(schema);
 
-                    if (!validation.valid) {
-                        throw {status: 400, message: validation.message || 'Validation has failed', details: validation.messages};
-                    }
+            const value = await entities.findAll();
 
-                    repositories.entityRepository()
-                        .create(entity)
-                        .then(value => res.json({value}));
-                })
-                .catch(e => handleError(req, res, e));
-        });
+            res.json({value});
+        }))
+        .post(wrap(async (req, res) => {
+            const schemas = repositories.schemaRepository();
+
+            const schema = await schemas.findById(req.params.schemaId);
+
+            if (!schema) {
+                throw {status: 404, message: 'Schema not found.'};
+            }
+
+            const entity = req.body as Entity;
+            entity.id = undefined;
+            entity.schemaId = schema.id;
+
+            const validation = services.entityValidation()
+                .validate(schema, entity);
+
+            if (!validation.valid) {
+                throw {status: 400, message: validation.message || 'Validation has failed', details: validation.messages};
+            }
+
+            const entities = repositories.entityRepository(schema);
+
+            const value = await entities.create(entity);
+
+            res.json({value});
+        }));
 
     app.route('/schemas/:schemaId/entities/:entityId')
-        .get((req, res) => {
-            repositories.schemaRepository()
-                .findById(req.params.schemaId)
-                .then(schema => {
-                    if (!schema) {
-                        throw {status: 404, message: 'Schema not found.'};
-                    }
+        .get(wrap(async (req, res) => {
+            const schemas = repositories.schemaRepository();
 
-                    repositories.entityRepository()
-                        .findById(req.params.entityId)
-                        .then(value => res.json({value}));
-                })
-                .catch(e => handleError(req, res, e));
-        })
-        .put((req, res) => {
-            repositories.schemaRepository()
-                .findById(req.params.schemaId)
-                .then(schema => {
-                    if (!schema) {
-                        throw {status: 404, message: 'Schema not found.'};
-                    }
+            const schema = await schemas.findById(req.params.schemaId);
 
-                    const entity = req.body as Entity;
+            if (!schema) {
+                throw {status: 404, message: 'Schema not found.'};
+            }
 
-                    if (entity.schemaId != schema.id) {
-                        throw {status: 400, message: 'This entity is not a part of this schema.'};
-                    }
+            const entities = repositories.entityRepository(schema);
 
-                    const validation = services.entityValidation()
-                        .validate(schema, entity);
+            const value = await entities.findById(req.params.entityId);
 
-                    if (!validation.valid) {
-                        throw {status: 400, message: validation.message || 'Validation has failed', details: validation.messages};
-                    }
+            res.json({value});
+        }))
+        .put(wrap(async (req, res) => {
+            const schemas = repositories.schemaRepository();
 
-                    repositories.entityRepository()
-                        .update(entity)
-                        .then(value => res.json({value}));
-                })
-                .catch(e => handleError(req, res, e));
-        })
-        .delete((req, res) => {
-            repositories.schemaRepository()
-                .findById(req.params.schemaId)
-                .then(schema => {
-                    if (!schema) {
-                        throw {status: 404, message: 'Schema not found.'};
-                    }
+            const schema = await schemas.findById(req.params.schemaId);
 
-                    repositories.entityRepository()
-                        .deleteById(req.params.entityId)
-                        .then(value => res.json({value}));
-                })
-                .catch(e => handleError(req, res, e));
-        });
+            if (!schema) {
+                throw {status: 404, message: 'Schema not found.'};
+            }
+
+            const entity = req.body as Entity;
+
+            if (entity.schemaId != schema.id) {
+                throw {status: 400, message: 'This entity is not a part of this schema.'};
+            }
+
+            const validation = services.entityValidation()
+                .validate(schema, entity);
+
+            if (!validation.valid) {
+                throw {status: 400, message: validation.message || 'Validation has failed', details: validation.messages};
+            }
+
+            const entities = repositories.entityRepository(schema);
+
+            const value = await entities.update(entity);
+
+            res.json({value});
+        }))
+        .delete(wrap(async (req, res) => {
+            const schemas = repositories.schemaRepository();
+            const schema = await schemas.findById(req.params.schemaId);
+
+            if (!schema) {
+                throw {status: 404, message: 'Schema not found.'};
+            }
+
+            const entities = repositories.entityRepository(schema);
+
+            await entities.deleteById(req.params.entityId);
+
+            res.status(204).send();
+        }));
 
     app.route('/schemas/:schemaId/entities/:entityId/:attribute')
-        .get(async (req, res) => {
-            try {
-                const schemas = repositories.schemaRepository();
-                const entities = repositories.entityRepository();
+        .get(wrap(async (req, res) => {
+            const schemas = repositories.schemaRepository();
 
-                const schema = await schemas.findById(req.params.schemaId);
+            const schema = await schemas.findById(req.params.schemaId);
 
-                if (!schema) {
-                    throw {status: 404, message: 'Schema not found.'};
-                }
-
-                const attribute = schema.attributes.find(a => a.name === req.params.attribute);
-
-                if (!attribute) {
-                    throw {status: 404, message: 'Attribute not found.'};
-                }
-
-                if (attribute.type !== AttributeType.RELATIONSHIP) {
-                    throw {status: 400, message: 'Target attribute is not a relationship.'};
-                }
-
-                const entity = await entities.findById(req.params.entityId);
-
-                if (!entity) {
-                    throw {status: 404, message: 'Entity not found.'};
-                }
-
-                const value = await entities.getRelationship(entity, req.params.attribute);
-
-                if (attribute.cardinality === Cardinality.MANY_TO_ONE || attribute.cardinality === Cardinality.ONE_TO_ONE) {
-                    res.json({value: value.length ? value[0] : []});
-                } else {
-                    res.json({value});
-                }
-            } catch (e) {
-                handleError(req, res, e);
+            if (!schema) {
+                throw {status: 404, message: 'Schema not found.'};
             }
-        })
-        .put(async (req, res) => {
-            try {
-                const schemas = repositories.schemaRepository();
-                const entities = repositories.entityRepository();
 
-                const schema = await schemas.findById(req.params.schemaId);
+            const attribute = schema.attributes.find(a => a.name === req.params.attribute);
 
-                if (!schema) {
-                    throw {status: 404, message: 'Schema not found.'};
-                }
-
-                const attribute = schema.attributes.find(a => a.name === req.params.attribute);
-
-                if (!attribute) {
-                    throw {status: 404, message: 'Attribute not found.'};
-                }
-
-                if (attribute.type !== AttributeType.RELATIONSHIP) {
-                    throw {status: 400, message: 'Target attribute is not a relationship.'};
-                }
-
-                if (attribute.cardinality === Cardinality.MANY_TO_MANY || attribute.cardinality === Cardinality.ONE_TO_MANY) {
-                    if (!Array.isArray(req.body)) {
-                        throw {status: 400, message: `${attribute.name} has cardinality ${attribute.cardinality} which can only be updated with an array.`};
-                    }
-                } else {
-                    if (Array.isArray(req.body)) {
-                        throw {status: 400, message: `${attribute.name} has cardinality ${attribute.cardinality} which can only be updated with an entity.`};
-                    }
-                }
-
-                const entity = await entities.findById(req.params.entityId);
-
-                if (!entity) {
-                    throw {status: 404, message: 'Entity not found.'};
-                }
-
-                const value = await entities.setRelationship(entity, attribute.name, req.body);
-
-                res.json({value});
-            } catch (e) {
-                handleError(req, res, e);
+            if (!attribute) {
+                throw {status: 404, message: 'Attribute not found.'};
             }
-        });
+
+            if (attribute.type !== AttributeType.RELATIONSHIP) {
+                throw {status: 400, message: 'Target attribute is not a relationship.'};
+            }
+
+            const entities = repositories.entityRepository(schema);
+
+            const entity = await entities.findById(req.params.entityId);
+
+            if (!entity) {
+                throw {status: 404, message: 'Entity not found.'};
+            }
+
+            res.json({value: entity[req.params.attribute]});
+        }))
+        .put(wrap(async (req, res) => {
+            const schemas = repositories.schemaRepository();
+
+            const schema = await schemas.findById(req.params.schemaId);
+
+            if (!schema) {
+                throw {status: 404, message: 'Schema not found.'};
+            }
+
+            const attribute = schema.attributes.find(a => a.name === req.params.attribute);
+
+            if (!attribute) {
+                throw {status: 404, message: 'Attribute not found.'};
+            }
+
+            if (attribute.type !== AttributeType.RELATIONSHIP) {
+                throw {status: 400, message: 'Target attribute is not a relationship.'};
+            }
+
+            const entities = repositories.entityRepository(schema);
+
+            const entity = await entities.findById(req.params.entityId);
+
+            if (!entity) {
+                throw {status: 404, message: 'Entity not found.'};
+            }
+
+            entity[req.params.attribute] = req.body;
+
+            const validation = services.entityValidation().validate(schema, entity);
+
+            if (!validation.valid) {
+                throw {status: 400, message: "Validation has failed."};
+            }
+
+            const value = await entities.update(entity);
+
+            res.json({value});
+        }));
 
     return app;
+}
+
+/**
+ * Adds the default error handler to the passed request handler
+ * @param handler
+ */
+function wrap(handler: (
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+) => Promise<void>): express.RequestHandler {
+    return async (req, res, next) => {
+        try {
+            await handler(req, res, next);
+        } catch (e) {
+            handleError(req, res, e);
+        }
+    };
 }
 
 function handleError(req: express.Request, res: express.Response, error: any) {

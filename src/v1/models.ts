@@ -4,7 +4,7 @@ export interface Identified {
 
 export interface Entity extends Identified {
     schemaId: string
-    [index: string]: string | number | boolean;
+    [index: string]: string | number | boolean | Entity | Entity[];
 }
 
 export interface Schema extends Identified {
@@ -38,10 +38,10 @@ export enum AttributeType {
 }
 
 export enum Cardinality {
-    ONE_TO_ONE,
-    ONE_TO_MANY,
-    MANY_TO_ONE,
-    MANY_TO_MANY
+    ONE_TO_ONE = "OneToEne",
+    ONE_TO_MANY = "OneToMany",
+    MANY_TO_ONE = "ManyToOne",
+    MANY_TO_MANY = "ManyToMany"
 }
 
 export interface ValidationResult {
